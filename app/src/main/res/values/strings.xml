@@ -15,6 +15,8 @@
     <string name="search_no_results">No tracks found. Try another search.</string>
     <string name="search_error">Could not connect. Tap to retry.</string>
     <string name="btn_retry">Retry</string>
+    <string name="btn_play">Play</string>
+    <string name="btn_pause">Pause</string>
     <string name="clear_search">Clear search</string>
 
     <string name="library_title">Your Collection</string>
