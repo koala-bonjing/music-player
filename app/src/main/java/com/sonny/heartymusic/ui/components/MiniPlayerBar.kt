@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -55,6 +56,7 @@ import com.sonny.heartymusic.ui.theme.HeroGradientStart
 fun MiniPlayerBar(
     playerState: PlayerState,
     onTogglePlayPause: () -> Unit,
+    onExpandPlayer: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val song = playerState.currentSong
@@ -70,7 +72,8 @@ fun MiniPlayerBar(
         Card(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 6.dp),
+                .padding(horizontal = 16.dp, vertical = 6.dp)
+                .clickable(onClick = onExpandPlayer),
             shape = RoundedCornerShape(20.dp),
             colors = CardDefaults.cardColors(containerColor = Color.Transparent),
             elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),

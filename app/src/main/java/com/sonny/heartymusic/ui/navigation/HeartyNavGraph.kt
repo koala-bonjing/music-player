@@ -1,5 +1,10 @@
 package com.sonny.heartymusic.ui.navigation
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -12,6 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -28,6 +36,7 @@ import com.sonny.heartymusic.HeartyApp
 import com.sonny.heartymusic.ui.components.MiniPlayerBar
 import com.sonny.heartymusic.ui.screens.home.HomeScreen
 import com.sonny.heartymusic.ui.screens.library.LibraryScreen
+import com.sonny.heartymusic.ui.screens.player.PlayerScreen
 import com.sonny.heartymusic.ui.screens.search.SearchScreen
 import com.sonny.heartymusic.ui.screens.search.SearchViewModel
 import com.sonny.heartymusic.ui.theme.CozyAccent
@@ -66,57 +75,83 @@ fun HeartyMainScreen(
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
-        containerColor = CozyBg,
-        bottomBar = {
-            Column {
-                MiniPlayerBar(
-                    playerState = playerState,
-                    onTogglePlayPause = { app.container.musicPlayerManager.togglePlayPause() }
-                )
-                HeartyBottomBar(
-                    currentRoute = currentRoute,
-                    onNavigate = { route ->
-                        navController.navigate(route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
+    var isPlayerExpanded by remember { mutableStateOf(false) }
+    val currentSong = playerState.currentSong
+
+    BackHandler(enabled = isPlayerExpanded) {
+        isPlayerExpanded = false
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = CozyBg,
+            bottomBar = {
+                Column {
+                    MiniPlayerBar(
+                        playerState = playerState,
+                        onTogglePlayPause = { app.container.musicPlayerManager.togglePlayPause() },
+                        onExpandPlayer = { isPlayerExpanded = true }
+                    )
+                    HeartyBottomBar(
+                        currentRoute = currentRoute,
+                        onNavigate = { route ->
+                            navController.navigate(route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
                             }
-                            launchSingleTop = true
-                            restoreState = true
                         }
-                    }
-                )
+                    )
+                }
+            }
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = Screen.Home.route,
+                modifier = Modifier.padding(innerPadding)
+            ) {
+                composable(Screen.Home.route) {
+                    HomeScreen(
+                        onNavigateToSearchWithQuery = { query ->
+                            searchViewModel.onQueryChange(query)
+                            searchViewModel.search()
+                            navController.navigate(Screen.Search.route) {
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                launchSingleTop = true
+                                restoreState = true
+                            }
+                        },
+                        currentPlayingSong = playerState.currentSong,
+                        isPlaying = playerState.isPlaying
+                    )
+                }
+                composable(Screen.Search.route) {
+                    SearchScreen(viewModel = searchViewModel)
+                }
+                composable(Screen.Library.route) {
+                    LibraryScreen()
+                }
             }
         }
-    ) { innerPadding ->
-        NavHost(
-            navController = navController,
-            startDestination = Screen.Home.route,
-            modifier = Modifier.padding(innerPadding)
+
+        AnimatedVisibility(
+            visible = isPlayerExpanded && currentSong != null,
+            enter = slideInVertically(initialOffsetY = { it }),
+            exit = slideOutVertically(targetOffsetY = { it })
         ) {
-            composable(Screen.Home.route) {
-                HomeScreen(
-                    onNavigateToSearchWithQuery = { query ->
-                        searchViewModel.onQueryChange(query)
-                        searchViewModel.search()
-                        navController.navigate(Screen.Search.route) {
-                            popUpTo(navController.graph.findStartDestination().id) {
-                                saveState = true
-                            }
-                            launchSingleTop = true
-                            restoreState = true
-                        }
-                    },
-                    currentPlayingSong = playerState.currentSong,
-                    isPlaying = playerState.isPlaying
+            if (currentSong != null) {
+                PlayerScreen(
+                    song = currentSong,
+                    playerState = playerState,
+                    onTogglePlayPause = { app.container.musicPlayerManager.togglePlayPause() },
+                    onSeekTo = { posMs -> app.container.musicPlayerManager.seekTo(posMs) },
+                    onDismiss = { isPlayerExpanded = false }
                 )
-            }
-            composable(Screen.Search.route) {
-                SearchScreen(viewModel = searchViewModel)
-            }
-            composable(Screen.Library.route) {
-                LibraryScreen()
             }
         }
     }
