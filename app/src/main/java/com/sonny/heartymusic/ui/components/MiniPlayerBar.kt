@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material3.Card
@@ -30,18 +32,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.sonny.heartymusic.R
 import com.sonny.heartymusic.player.PlayerState
-import com.sonny.heartymusic.ui.theme.HeartyPrimary
-import com.sonny.heartymusic.ui.theme.HeartyPrimaryContainer
-import com.sonny.heartymusic.ui.theme.HeartySurface
-import com.sonny.heartymusic.ui.theme.HeartyText
-import com.sonny.heartymusic.ui.theme.HeartyTextSecondary
+import com.sonny.heartymusic.ui.theme.CozyAccent
+import com.sonny.heartymusic.ui.theme.CozyCardBorder
+import com.sonny.heartymusic.ui.theme.CozyMuted
+import com.sonny.heartymusic.ui.theme.CozyText
+import com.sonny.heartymusic.ui.theme.HeroGradientEnd
+import com.sonny.heartymusic.ui.theme.HeroGradientMiddle
+import com.sonny.heartymusic.ui.theme.HeroGradientStart
 
 @Composable
 fun MiniPlayerBar(
@@ -64,94 +72,130 @@ fun MiniPlayerBar(
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = HeartySurface),
-            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp)
+            colors = CardDefaults.cardColors(containerColor = Color.Transparent),
+            elevation = CardDefaults.cardElevation(defaultElevation = 6.dp),
+            border = CardDefaults.outlinedCardBorder().copy(brush = Brush.linearGradient(listOf(CozyCardBorder, CozyCardBorder)))
         ) {
-            Column(modifier = Modifier.fillMaxWidth()) {
-                val progress = if (playerState.durationMs > 0) {
-                    (playerState.currentPositionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f)
-                } else 0f
-
-                LinearProgressIndicator(
-                    progress = { progress },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(3.dp),
-                    color = HeartyPrimary,
-                    trackColor = HeartyPrimaryContainer
-                )
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    AsyncImage(
-                        model = song.thumbnailUrl,
-                        contentDescription = song.title,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(RoundedCornerShape(14.dp))
-                    )
-
-                    Spacer(modifier = Modifier.width(12.dp))
-
-                    Column(
-                        modifier = Modifier.weight(1f)
-                    ) {
-                        Text(
-                            text = song.title,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = HeartyText,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = song.artist,
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = HeartyTextSecondary,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.width(8.dp))
-
-                    Box(
-                        modifier = Modifier
-                            .size(40.dp)
-                            .clip(CircleShape)
-                            .background(HeartyPrimaryContainer),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (playerState.isLoading) {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(20.dp),
-                                color = HeartyPrimary,
-                                strokeWidth = 2.dp
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        Brush.horizontalGradient(
+                            listOf(
+                                HeroGradientStart.copy(alpha = 0.96f),
+                                HeroGradientMiddle.copy(alpha = 0.96f),
+                                HeroGradientEnd.copy(alpha = 0.96f)
                             )
-                        } else {
-                            IconButton(onClick = onTogglePlayPause) {
-                                Icon(
-                                    imageVector = if (playerState.isPlaying) {
-                                        Icons.Rounded.Pause
-                                    } else {
-                                        Icons.Rounded.PlayArrow
-                                    },
-                                    contentDescription = if (playerState.isPlaying) {
-                                        stringResource(id = R.string.btn_pause)
-                                    } else {
-                                        stringResource(id = R.string.btn_play)
-                                    },
-                                    tint = HeartyPrimary,
-                                    modifier = Modifier.size(24.dp)
+                        )
+                    )
+            ) {
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = song.thumbnailUrl,
+                            contentDescription = song.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .border(1.dp, Color.White, RoundedCornerShape(12.dp))
+                        )
+
+                        Spacer(modifier = Modifier.width(12.dp))
+
+                        Column(
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(
+                                text = song.title,
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = CozyText,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = song.artist,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = CozyMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(6.dp))
+
+                        // Heart favorite button
+                        IconButton(
+                            onClick = { /* favorite toggle */ },
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.Favorite,
+                                contentDescription = "Favorite",
+                                tint = CozyAccent,
+                                modifier = Modifier.size(18.dp)
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.width(4.dp))
+
+                        // Play / Pause round pill
+                        Box(
+                            modifier = Modifier
+                                .size(38.dp)
+                                .clip(CircleShape)
+                                .background(CozyAccent),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (playerState.isLoading) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
                                 )
+                            } else {
+                                IconButton(
+                                    onClick = onTogglePlayPause,
+                                    modifier = Modifier.size(38.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = if (playerState.isPlaying) {
+                                            Icons.Rounded.Pause
+                                        } else {
+                                            Icons.Rounded.PlayArrow
+                                        },
+                                        contentDescription = if (playerState.isPlaying) {
+                                            stringResource(id = R.string.btn_pause)
+                                        } else {
+                                            stringResource(id = R.string.btn_play)
+                                        },
+                                        tint = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
                             }
                         }
                     }
+
+                    val progress = if (playerState.durationMs > 0) {
+                        (playerState.currentPositionMs.toFloat() / playerState.durationMs.toFloat()).coerceIn(0f, 1f)
+                    } else 0f
+
+                    LinearProgressIndicator(
+                        progress = { progress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(2.5.dp),
+                        color = CozyAccent,
+                        trackColor = Color.White.copy(alpha = 0.7f)
+                    )
                 }
             }
         }

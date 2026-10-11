@@ -30,12 +30,12 @@ import com.sonny.heartymusic.ui.screens.home.HomeScreen
 import com.sonny.heartymusic.ui.screens.library.LibraryScreen
 import com.sonny.heartymusic.ui.screens.search.SearchScreen
 import com.sonny.heartymusic.ui.screens.search.SearchViewModel
-import com.sonny.heartymusic.ui.theme.HeartyBackground
-import com.sonny.heartymusic.ui.theme.HeartyPrimary
-import com.sonny.heartymusic.ui.theme.HeartyPrimaryContainer
-import com.sonny.heartymusic.ui.theme.HeartySurface
-import com.sonny.heartymusic.ui.theme.HeartyText
-import com.sonny.heartymusic.ui.theme.HeartyTextSecondary
+import com.sonny.heartymusic.ui.theme.CozyAccent
+import com.sonny.heartymusic.ui.theme.CozyAccentSoft
+import com.sonny.heartymusic.ui.theme.CozyBg
+import com.sonny.heartymusic.ui.theme.CozyMuted
+import com.sonny.heartymusic.ui.theme.CozyNavBg
+import com.sonny.heartymusic.ui.theme.CozyText
 
 private val bottomNavItems = listOf(
     Screen.Home,
@@ -68,7 +68,7 @@ fun HeartyMainScreen(
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
-        containerColor = HeartyBackground,
+        containerColor = CozyBg,
         bottomBar = {
             Column {
                 MiniPlayerBar(
@@ -96,7 +96,21 @@ fun HeartyMainScreen(
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Home.route) {
-                HomeScreen()
+                HomeScreen(
+                    onNavigateToSearchWithQuery = { query ->
+                        searchViewModel.onQueryChange(query)
+                        searchViewModel.search()
+                        navController.navigate(Screen.Search.route) {
+                            popUpTo(navController.graph.findStartDestination().id) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
+                    },
+                    currentPlayingSong = playerState.currentSong,
+                    isPlaying = playerState.isPlaying
+                )
             }
             composable(Screen.Search.route) {
                 SearchScreen(viewModel = searchViewModel)
@@ -114,8 +128,8 @@ private fun HeartyBottomBar(
     onNavigate: (String) -> Unit
 ) {
     NavigationBar(
-        containerColor = HeartySurface,
-        contentColor = HeartyText
+        containerColor = CozyNavBg,
+        contentColor = CozyText
     ) {
         bottomNavItems.forEach { screen ->
             val selected = currentRoute == screen.route
@@ -132,11 +146,11 @@ private fun HeartyBottomBar(
                     Text(text = stringResource(id = screen.titleRes))
                 },
                 colors = NavigationBarItemDefaults.colors(
-                    indicatorColor = HeartyPrimaryContainer,
-                    selectedIconColor = HeartyPrimary,
-                    selectedTextColor = HeartyText,
-                    unselectedIconColor = HeartyTextSecondary,
-                    unselectedTextColor = HeartyTextSecondary
+                    indicatorColor = CozyAccentSoft,
+                    selectedIconColor = CozyAccent,
+                    selectedTextColor = CozyAccent,
+                    unselectedIconColor = CozyMuted,
+                    unselectedTextColor = CozyMuted
                 )
             )
         }
