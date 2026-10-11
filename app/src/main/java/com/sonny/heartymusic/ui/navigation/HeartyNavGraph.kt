@@ -19,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -45,6 +46,7 @@ import com.sonny.heartymusic.ui.theme.CozyBg
 import com.sonny.heartymusic.ui.theme.CozyMuted
 import com.sonny.heartymusic.ui.theme.CozyNavBg
 import com.sonny.heartymusic.ui.theme.CozyText
+import kotlinx.coroutines.launch
 
 private val bottomNavItems = listOf(
     Screen.Home,
@@ -76,6 +78,11 @@ fun HeartyMainScreen(
     val isShuffleActive by app.container.musicPlayerManager.isShuffleMode.collectAsState()
     val isRepeatActive by app.container.musicPlayerManager.isRepeatMode.collectAsState()
 
+    val favorites by app.container.libraryRepository.favorites.collectAsState(initial = emptyList())
+    val recentHistory by app.container.libraryRepository.recentHistory.collectAsState(initial = emptyList())
+    val playlists by app.container.libraryRepository.playlists.collectAsState(initial = emptyList())
+    val coroutineScope = rememberCoroutineScope()
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
@@ -97,7 +104,7 @@ fun HeartyMainScreen(
                         onTogglePlayPause = { app.container.musicPlayerManager.togglePlayPause() },
                         onExpandPlayer = { isPlayerExpanded = true },
                         isFavorited = currentSong?.let { favoriteIds.contains(it.id) } ?: false,
-                        onToggleFavorite = { currentSong?.let { app.container.musicPlayerManager.toggleFavorite(it.id) } }
+                        onToggleFavorite = { currentSong?.let { app.container.musicPlayerManager.toggleFavorite(it) } }
                     )
                     HeartyBottomBar(
                         currentRoute = currentRoute,
@@ -133,14 +140,30 @@ fun HeartyMainScreen(
                             }
                         },
                         currentPlayingSong = playerState.currentSong,
-                        isPlaying = playerState.isPlaying
+                        isPlaying = playerState.isPlaying,
+                        recentHistory = recentHistory,
+                        favorites = favorites,
+                        onPlaySong = { song ->
+                            app.container.musicPlayerManager.play(song)
+                        }
                     )
                 }
                 composable(Screen.Search.route) {
                     SearchScreen(viewModel = searchViewModel)
                 }
                 composable(Screen.Library.route) {
-                    LibraryScreen()
+                    LibraryScreen(
+                        favorites = favorites,
+                        playlists = playlists,
+                        onCreatePlaylist = { title, emoji ->
+                            coroutineScope.launch {
+                                app.container.libraryRepository.createPlaylist(title = title, coverEmoji = emoji)
+                            }
+                        },
+                        onPlaySong = { song ->
+                            app.container.musicPlayerManager.play(song)
+                        }
+                    )
                 }
             }
         }
@@ -161,7 +184,7 @@ fun HeartyMainScreen(
                     onNext = { app.container.musicPlayerManager.seekToNext() },
                     onToggleShuffle = { app.container.musicPlayerManager.toggleShuffle() },
                     onToggleRepeat = { app.container.musicPlayerManager.toggleRepeat() },
-                    onToggleFavorite = { app.container.musicPlayerManager.toggleFavorite(currentSong.id) },
+                    onToggleFavorite = { app.container.musicPlayerManager.toggleFavorite(currentSong) },
                     isShuffleActive = isShuffleActive,
                     isRepeatActive = isRepeatActive,
                     isFavorited = favoriteIds.contains(currentSong.id),

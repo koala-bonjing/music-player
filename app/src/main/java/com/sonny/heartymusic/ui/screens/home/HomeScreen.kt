@@ -29,9 +29,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Bedtime
 import androidx.compose.material.icons.rounded.LocalCafe
-import androidx.compose.material.icons.rounded.MenuBook
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -88,11 +88,23 @@ import com.sonny.heartymusic.ui.theme.MoodStudyFrom
 import com.sonny.heartymusic.ui.theme.MoodStudyIcon
 import com.sonny.heartymusic.ui.theme.MoodStudyTo
 
+const val BIBBLE_AVATAR_URL = "https://lh3.googleusercontent.com/aida/AEtjO1U1T1A9ivm653xkjr23bHQRv5fttBJkydo3n1Iuz7bdwP3OJFMH_mbDic7-TzgDbwdOeiEnRX-HeFS4kGnffTvFoS7n1hec6wOth-CDT2kokHVYO_dZvW5st1RJAIN3mFurgulHyw7sitpViss0_2h-geh8o1fv2FCIjILRJdZbOkLuYTvxc2Z0gnOM71qgfnK14A0KgHcVtfdPmO6H3PuLCXwBdcgfMJBt7UpzFzIIowHR9mEgHmAUrZs"
+
+fun getDynamicGreeting(): String {
+    val hour = java.time.LocalTime.now().hour
+    return when (hour) {
+        in 5..11 -> "GOOD MORNING, CUTIE"
+        in 12..16 -> "GOOD AFTERNOON, CUTIE"
+        else -> "GOOD EVENING, CUTIE"
+    }
+}
+
 data class QuickPick(
     val title: String,
     val artist: String,
     val coverUrl: String,
-    val query: String
+    val query: String,
+    val song: Song? = null
 )
 
 data class MadeForYouMix(
@@ -134,7 +146,7 @@ private val cozyMoods = listOf(
     CozyMood("Rainy Afternoon", "Lo-fi & Gentle Rain", Icons.Rounded.WaterDrop, MoodRainIcon, MoodRainFrom, MoodRainTo, CozyCardBorder, "Rainy Afternoon Lofi with Rain"),
     CozyMood("Warm Cafe Bakery", "Soft Bossa & Jazz", Icons.Rounded.LocalCafe, MoodCafeIcon, MoodCafeFrom, MoodCafeTo, MoodCafeBorder, "Warm Cafe Bakery Bossa Nova Jazz"),
     CozyMood("Starlit Lullaby", "Ambient Sleep Melodies", Icons.Rounded.Bedtime, MoodNightIcon, MoodNightFrom, MoodNightTo, MoodNightBorder, "Starlit Lullaby Ambient Sleep Melodies"),
-    CozyMood("Cute Study Desk", "Focus Chill Beats", Icons.Rounded.MenuBook, MoodStudyIcon, MoodStudyFrom, MoodStudyTo, MoodStudyBorder, "Cute Study Desk Focus Beats")
+    CozyMood("Cute Study Desk", "Focus Chill Beats", Icons.AutoMirrored.Rounded.MenuBook, MoodStudyIcon, MoodStudyFrom, MoodStudyTo, MoodStudyBorder, "Cute Study Desk Focus Beats")
 )
 
 private val categories = listOf("All", "Music", "Podcasts", "Lo-Fi Vibes", "Soft Pop")
@@ -144,10 +156,60 @@ fun HomeScreen(
     modifier: Modifier = Modifier,
     onNavigateToSearchWithQuery: (String) -> Unit = {},
     currentPlayingSong: Song? = null,
-    isPlaying: Boolean = false
+    isPlaying: Boolean = false,
+    recentHistory: List<Song> = emptyList(),
+    favorites: List<Song> = emptyList(),
+    onPlaySong: (Song) -> Unit = {}
 ) {
     var selectedCategory by remember { mutableStateOf("All") }
     val scrollState = rememberScrollState()
+
+    val dynamicQuickPicks = remember(recentHistory) {
+        val historyItems = recentHistory.map { song ->
+            QuickPick(
+                title = song.title,
+                artist = song.artist,
+                coverUrl = song.thumbnailUrl,
+                query = "${song.title} ${song.artist}",
+                song = song
+            )
+        }
+        val needed = (6 - historyItems.size).coerceAtLeast(0)
+        val filler = quickPicks.filterNot { qp ->
+            historyItems.any { it.title.equals(qp.title, ignoreCase = true) }
+        }.take(needed)
+        (historyItems + filler).take(6)
+    }
+
+    val dynamicMixes = remember(favorites, recentHistory) {
+        val list = mutableListOf<MadeForYouMix>()
+        if (favorites.isNotEmpty()) {
+            val topFav = favorites.first()
+            list.add(
+                MadeForYouMix(
+                    title = "Your Loved Echoes",
+                    artists = "${topFav.artist} & favorites",
+                    tag = "FAVORITES",
+                    coverUrl = topFav.thumbnailUrl.ifEmpty { "https://images.unsplash.com/photo-1518895949257-7621c3c786d7?w=400&q=80" },
+                    query = "${topFav.artist} cozy"
+                )
+            )
+        }
+        if (recentHistory.isNotEmpty()) {
+            val recent = recentHistory.first()
+            list.add(
+                MadeForYouMix(
+                    title = "Cozy Replay Mix",
+                    artists = "${recent.artist} & recent vibes",
+                    tag = "RECENT",
+                    coverUrl = recent.thumbnailUrl.ifEmpty { "https://images.unsplash.com/photo-1526478806334-5fd488fcaabc?w=400&q=80" },
+                    query = "${recent.artist} lofi"
+                )
+            )
+        }
+        list.addAll(madeForYouMixes)
+        list.distinctBy { it.title }.take(6)
+    }
 
     Column(
         modifier = modifier
@@ -178,11 +240,15 @@ fun HomeScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             JumpBackInGrid(
-                items = quickPicks,
+                items = dynamicQuickPicks,
                 currentPlayingSong = currentPlayingSong,
                 isPlaying = isPlaying,
                 onItemClick = { item ->
-                    onNavigateToSearchWithQuery(item.query)
+                    if (item.song != null) {
+                        onPlaySong(item.song)
+                    } else {
+                        onNavigateToSearchWithQuery(item.query)
+                    }
                 }
             )
 
@@ -190,7 +256,7 @@ fun HomeScreen(
         }
 
         MadeForYouSection(
-            mixes = madeForYouMixes,
+            mixes = dynamicMixes,
             onMixClick = { mix ->
                 onNavigateToSearchWithQuery(mix.query)
             }
@@ -214,6 +280,8 @@ private fun TopBar(
     selectedCategory: String,
     onCategorySelected: (String) -> Unit
 ) {
+    val dynamicGreeting = remember { getDynamicGreeting() }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -230,7 +298,7 @@ private fun TopBar(
             Column {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "GOOD EVENING, CUTIE",
+                        text = dynamicGreeting,
                         color = CozyAccent,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -274,8 +342,8 @@ private fun TopBar(
                         .border(2.dp, CozyAccent, CircleShape)
                 ) {
                     AsyncImage(
-                        model = "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&q=80",
-                        contentDescription = "Profile",
+                        model = BIBBLE_AVATAR_URL,
+                        contentDescription = "Bibble Profile",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize()
                     )
@@ -458,7 +526,10 @@ private fun JumpBackInGrid(
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 rowItems.forEach { item ->
-                    val isItemActive = isPlaying && currentPlayingSong?.title?.contains(item.title, ignoreCase = true) == true
+                    val isItemActive = isPlaying && (
+                        (item.song != null && currentPlayingSong?.id == item.song.id) ||
+                        (currentPlayingSong?.title?.contains(item.title, ignoreCase = true) == true)
+                    )
 
                     Card(
                         modifier = Modifier

@@ -55,7 +55,8 @@ class SearchViewModel(
     }
 
     fun playSong(song: Song) {
-        playerManager.play(song)
+        val currentList = (_uiState.value as? SearchUiState.Success)?.songs
+        playerManager.play(song, currentList)
     }
 
     fun togglePlayPause() {

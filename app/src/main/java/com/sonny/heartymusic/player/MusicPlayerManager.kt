@@ -36,7 +36,8 @@ data class PlayerState(
 
 class MusicPlayerManager(
     private val context: Context,
-    @Suppress("UNUSED_PARAMETER") private val musicRepository: MusicRepository? = null
+    @Suppress("UNUSED_PARAMETER") private val musicRepository: MusicRepository? = null,
+    private val libraryRepository: com.sonny.heartymusic.data.repository.LibraryRepository? = null
 ) {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private var progressTrackerJob: Job? = null
@@ -61,6 +62,13 @@ class MusicPlayerManager(
 
     init {
         connectToMediaService()
+        libraryRepository?.let { repo ->
+            scope.launch {
+                repo.favoriteIds.collect { ids ->
+                    _favoriteSongIds.value = ids
+                }
+            }
+        }
     }
 
     private fun connectToMediaService() {
@@ -217,11 +225,48 @@ class MusicPlayerManager(
         controller.setMediaItem(mediaItem)
         controller.prepare()
         controller.play()
+
+        scope.launch {
+            try {
+                libraryRepository?.recordPlay(song)
+            } catch (e: Exception) {
+                // Ignore recording failure
+            }
+        }
+    }
+
+    fun toggleFavorite(song: Song) {
+        val songId = song.id
+        _favoriteSongIds.update { set ->
+            if (set.contains(songId)) set - songId else set + songId
+        }
+        scope.launch {
+            try {
+                libraryRepository?.toggleFavorite(song)
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
     }
 
     fun toggleFavorite(songId: String) {
-        _favoriteSongIds.update { set ->
-            if (set.contains(songId)) set - songId else set + songId
+        val current = _playerState.value.currentSong
+        if (current != null && current.id == songId) {
+            toggleFavorite(current)
+        } else {
+            _favoriteSongIds.update { set ->
+                if (set.contains(songId)) set - songId else set + songId
+            }
+            scope.launch {
+                try {
+                    val isFav = _favoriteSongIds.value.contains(songId)
+                    if (!isFav) {
+                        libraryRepository?.removeFavorite(songId)
+                    }
+                } catch (e: Exception) {
+                    // Ignore
+                }
+            }
         }
     }
 
