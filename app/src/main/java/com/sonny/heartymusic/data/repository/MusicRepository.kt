@@ -49,11 +49,11 @@ class MusicRepository {
     private inline fun <T> runCatchingWithRetry(block: () -> T): Result<T> {
         return try {
             Result.success(block())
-        } catch (firstError: Exception) {
+        } catch (firstError: Throwable) {
             try {
                 // Retry once as mandated by rules
                 Result.success(block())
-            } catch (secondError: Exception) {
+            } catch (secondError: Throwable) {
                 Result.failure(secondError)
             }
         }

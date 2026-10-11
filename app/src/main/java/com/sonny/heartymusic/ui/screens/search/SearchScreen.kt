@@ -15,7 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -135,11 +135,13 @@ private fun SearchInputBar(
             )
         },
         leadingIcon = {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = null,
-                tint = HeartyPrimary
-            )
+            IconButton(onClick = onSearch) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = stringResource(id = R.string.nav_search),
+                    tint = HeartyPrimary
+                )
+            }
         },
         trailingIcon = {
             if (query.isNotEmpty()) {
@@ -178,7 +180,10 @@ private fun SearchResultList(
         verticalArrangement = Arrangement.spacedBy(10.dp),
         contentPadding = PaddingValues(bottom = 80.dp)
     ) {
-        items(songs, key = { it.id }) { song ->
+        itemsIndexed(
+            items = songs,
+            key = { index, song -> "${song.id}_$index" }
+        ) { _, song ->
             SongListItem(
                 song = song,
                 isPlaying = song.id == currentlyPlayingId,
