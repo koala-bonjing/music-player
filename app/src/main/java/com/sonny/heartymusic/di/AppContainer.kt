@@ -27,4 +27,8 @@ class AppContainer(context: Context) {
     val musicPlayerManager: MusicPlayerManager by lazy {
         MusicPlayerManager(context.applicationContext, musicRepository)
     }
+
+    val lyricsRepository: com.sonny.heartymusic.data.repository.LyricsRepository by lazy {
+        com.sonny.heartymusic.data.repository.LyricsRepository(okHttpClient)
+    }
 }

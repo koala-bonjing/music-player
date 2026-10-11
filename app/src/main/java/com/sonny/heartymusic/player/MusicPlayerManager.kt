@@ -44,6 +44,17 @@ class MusicPlayerManager(
     private val _playerState = MutableStateFlow(PlayerState())
     val playerState: StateFlow<PlayerState> = _playerState.asStateFlow()
 
+    private val _favoriteSongIds = MutableStateFlow<Set<String>>(emptySet())
+    val favoriteSongIds: StateFlow<Set<String>> = _favoriteSongIds.asStateFlow()
+
+    private val _isShuffleMode = MutableStateFlow(false)
+    val isShuffleMode: StateFlow<Boolean> = _isShuffleMode.asStateFlow()
+
+    private val _isRepeatMode = MutableStateFlow(false)
+    val isRepeatMode: StateFlow<Boolean> = _isRepeatMode.asStateFlow()
+
+    private val playlistQueue = mutableListOf<Song>()
+
     private var controllerFuture: ListenableFuture<MediaController>? = null
     private var mediaController: MediaController? = null
     private var pendingSongToPlay: Song? = null
@@ -162,7 +173,14 @@ class MusicPlayerManager(
         }
     }
 
-    fun play(song: Song) {
+    fun play(song: Song, queue: List<Song>? = null) {
+        if (queue != null) {
+            playlistQueue.clear()
+            playlistQueue.addAll(queue)
+        } else if (!playlistQueue.any { it.id == song.id }) {
+            playlistQueue.add(song)
+        }
+
         _playerState.update {
             it.copy(
                 currentSong = song,
@@ -201,6 +219,12 @@ class MusicPlayerManager(
         controller.play()
     }
 
+    fun toggleFavorite(songId: String) {
+        _favoriteSongIds.update { set ->
+            if (set.contains(songId)) set - songId else set + songId
+        }
+    }
+
     fun togglePlayPause() {
         val controller = mediaController ?: return
         if (controller.isPlaying) {
@@ -212,6 +236,46 @@ class MusicPlayerManager(
 
     fun seekTo(positionMs: Long) {
         mediaController?.seekTo(positionMs)
+    }
+
+    fun seekToPrevious() {
+        val controller = mediaController ?: return
+        if (controller.currentPosition > 3000L) {
+            controller.seekTo(0)
+        } else {
+            val currentIndex = playlistQueue.indexOfFirst { it.id == _playerState.value.currentSong?.id }
+            if (currentIndex > 0) {
+                play(playlistQueue[currentIndex - 1])
+            } else {
+                controller.seekTo(0)
+            }
+        }
+    }
+
+    fun seekToNext() {
+        val controller = mediaController ?: return
+        val currentId = _playerState.value.currentSong?.id
+        val currentIndex = playlistQueue.indexOfFirst { it.id == currentId }
+        if (currentIndex in 0 until playlistQueue.size - 1) {
+            play(playlistQueue[currentIndex + 1])
+        } else if (_isShuffleMode.value && playlistQueue.isNotEmpty()) {
+            val randomSong = playlistQueue.filter { it.id != currentId }.randomOrNull() ?: playlistQueue.first()
+            play(randomSong)
+        } else {
+            controller.seekTo(0)
+        }
+    }
+
+    fun toggleShuffle() {
+        val next = !_isShuffleMode.value
+        _isShuffleMode.value = next
+        mediaController?.shuffleModeEnabled = next
+    }
+
+    fun toggleRepeat() {
+        val next = !_isRepeatMode.value
+        _isRepeatMode.value = next
+        mediaController?.repeatMode = if (next) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
     }
 
     fun release() {

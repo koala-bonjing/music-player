@@ -35,6 +35,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.clickable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -57,6 +58,8 @@ fun MiniPlayerBar(
     playerState: PlayerState,
     onTogglePlayPause: () -> Unit,
     onExpandPlayer: () -> Unit = {},
+    isFavorited: Boolean = false,
+    onToggleFavorite: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val song = playerState.currentSong
@@ -120,7 +123,7 @@ fun MiniPlayerBar(
                                 fontWeight = FontWeight.Bold,
                                 color = CozyText,
                                 maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
+                                modifier = Modifier.basicMarquee()
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
@@ -134,39 +137,39 @@ fun MiniPlayerBar(
 
                         Spacer(modifier = Modifier.width(6.dp))
 
-                        // Heart favorite button
+                        // Heart favorite button (smaller like prototype)
                         IconButton(
-                            onClick = { /* favorite toggle */ },
-                            modifier = Modifier.size(36.dp)
+                            onClick = onToggleFavorite,
+                            modifier = Modifier.size(28.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Favorite,
                                 contentDescription = "Favorite",
-                                tint = CozyAccent,
-                                modifier = Modifier.size(18.dp)
+                                tint = if (isFavorited) CozyAccent else CozyMuted.copy(alpha = 0.5f),
+                                modifier = Modifier.size(15.dp)
                             )
                         }
 
                         Spacer(modifier = Modifier.width(4.dp))
 
-                        // Play / Pause round pill
+                        // Play / Pause round pill (smaller like prototype)
                         Box(
                             modifier = Modifier
-                                .size(38.dp)
+                                .size(32.dp)
                                 .clip(CircleShape)
                                 .background(CozyAccent),
                             contentAlignment = Alignment.Center
                         ) {
                             if (playerState.isLoading) {
                                 CircularProgressIndicator(
-                                    modifier = Modifier.size(20.dp),
+                                    modifier = Modifier.size(16.dp),
                                     color = Color.White,
                                     strokeWidth = 2.dp
                                 )
                             } else {
                                 IconButton(
                                     onClick = onTogglePlayPause,
-                                    modifier = Modifier.size(38.dp)
+                                    modifier = Modifier.size(32.dp)
                                 ) {
                                     Icon(
                                         imageVector = if (playerState.isPlaying) {
@@ -180,7 +183,7 @@ fun MiniPlayerBar(
                                             stringResource(id = R.string.btn_play)
                                         },
                                         tint = Color.White,
-                                        modifier = Modifier.size(20.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }

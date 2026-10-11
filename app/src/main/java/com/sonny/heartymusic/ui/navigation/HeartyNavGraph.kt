@@ -72,6 +72,10 @@ fun HeartyMainScreen(
     )
 
     val playerState by app.container.musicPlayerManager.playerState.collectAsState()
+    val favoriteIds by app.container.musicPlayerManager.favoriteSongIds.collectAsState()
+    val isShuffleActive by app.container.musicPlayerManager.isShuffleMode.collectAsState()
+    val isRepeatActive by app.container.musicPlayerManager.isRepeatMode.collectAsState()
+
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route ?: Screen.Home.route
 
@@ -91,7 +95,9 @@ fun HeartyMainScreen(
                     MiniPlayerBar(
                         playerState = playerState,
                         onTogglePlayPause = { app.container.musicPlayerManager.togglePlayPause() },
-                        onExpandPlayer = { isPlayerExpanded = true }
+                        onExpandPlayer = { isPlayerExpanded = true },
+                        isFavorited = currentSong?.let { favoriteIds.contains(it.id) } ?: false,
+                        onToggleFavorite = { currentSong?.let { app.container.musicPlayerManager.toggleFavorite(it.id) } }
                     )
                     HeartyBottomBar(
                         currentRoute = currentRoute,
@@ -150,7 +156,16 @@ fun HeartyMainScreen(
                     playerState = playerState,
                     onTogglePlayPause = { app.container.musicPlayerManager.togglePlayPause() },
                     onSeekTo = { posMs -> app.container.musicPlayerManager.seekTo(posMs) },
-                    onDismiss = { isPlayerExpanded = false }
+                    onDismiss = { isPlayerExpanded = false },
+                    onPrevious = { app.container.musicPlayerManager.seekToPrevious() },
+                    onNext = { app.container.musicPlayerManager.seekToNext() },
+                    onToggleShuffle = { app.container.musicPlayerManager.toggleShuffle() },
+                    onToggleRepeat = { app.container.musicPlayerManager.toggleRepeat() },
+                    onToggleFavorite = { app.container.musicPlayerManager.toggleFavorite(currentSong.id) },
+                    isShuffleActive = isShuffleActive,
+                    isRepeatActive = isRepeatActive,
+                    isFavorited = favoriteIds.contains(currentSong.id),
+                    lyricsRepository = app.container.lyricsRepository
                 )
             }
         }
