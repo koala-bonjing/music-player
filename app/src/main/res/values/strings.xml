@@ -1,0 +1,23 @@
+<resources>
+    <string name="app_name">Hearty Music</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_library">Library</string>
+
+    <string name="home_title">Cozy Moments</string>
+    <string name="home_subtitle">Your soft, quiet personal music corner</string>
+
+    <string name="search_placeholder">Search songs, artists, vibes...</string>
+    <string name="search_hint">Find tracks to play</string>
+    <string name="search_empty_title">Ready to listen?</string>
+    <string name="search_empty_subtitle">Type a song or artist name above</string>
+    <string name="search_loading">Finding tracks...</string>
+    <string name="search_no_results">No tracks found. Try another search.</string>
+    <string name="search_error">Could not connect. Tap to retry.</string>
+    <string name="btn_retry">Retry</string>
+    <string name="clear_search">Clear search</string>
+
+    <string name="library_title">Your Collection</string>
+    <string name="library_empty_title">Nothing saved yet</string>
+    <string name="library_empty_subtitle">Favorites and playlists will appear here in upcoming phases</string>
+</resources>
