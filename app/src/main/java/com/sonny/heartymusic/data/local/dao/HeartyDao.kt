@@ -45,9 +45,18 @@ interface HeartyDao {
     @Query("DELETE FROM playlists WHERE id = :id")
     suspend fun deletePlaylist(id: String)
 
+    @Query("DELETE FROM playlist_songs WHERE playlistId = :playlistId")
+    suspend fun deleteSongsForPlaylist(playlistId: String)
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun addSongToPlaylist(crossRef: PlaylistSongCrossRef)
 
-    @Query("SELECT * FROM favorite_songs WHERE id IN (SELECT songId FROM playlist_songs WHERE playlistId = :playlistId)")
-    fun getSongsForPlaylist(playlistId: String): Flow<List<FavoriteSongEntity>>
+    @Query("UPDATE playlists SET songCount = (SELECT COUNT(*) FROM playlist_songs WHERE playlistId = :playlistId) WHERE id = :playlistId")
+    suspend fun updatePlaylistSongCount(playlistId: String)
+
+    @Query("SELECT * FROM playlist_songs WHERE playlistId = :playlistId ORDER BY addedAt DESC")
+    fun getSongsForPlaylist(playlistId: String): Flow<List<PlaylistSongCrossRef>>
+
+    @Query("DELETE FROM playlist_songs WHERE playlistId = :playlistId AND songId = :songId")
+    suspend fun removeSongFromPlaylist(playlistId: String, songId: String)
 }

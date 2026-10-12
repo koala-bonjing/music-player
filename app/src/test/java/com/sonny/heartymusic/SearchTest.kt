@@ -6,6 +6,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 import org.junit.Test
 import org.schabi.newpipe.extractor.NewPipe
+import org.schabi.newpipe.extractor.ServiceList
 
 class SearchTest {
     @Test
@@ -16,10 +17,10 @@ class SearchTest {
         val result = runBlocking {
             repo.searchSongs("Adele")
         }
-        println("Result success: ${result.isSuccess}")
-        if (result.isFailure) {
-            println("Exception: ${result.exceptionOrNull()}")
-            result.exceptionOrNull()?.printStackTrace()
+        val suggestions = runBlocking {
+            ServiceList.YouTube.getSuggestionExtractor().suggestionList("adele")
         }
+        org.junit.Assert.assertTrue(result.isSuccess)
+        org.junit.Assert.assertTrue(suggestions.isNotEmpty())
     }
 }

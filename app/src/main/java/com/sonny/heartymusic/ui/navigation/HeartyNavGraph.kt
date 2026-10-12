@@ -161,7 +161,10 @@ fun HeartyMainScreen(
                             }
                         },
                         onPlaySong = { song ->
-                            app.container.musicPlayerManager.play(song)
+                            app.container.musicPlayerManager.play(song, sourceTitle = "Library")
+                        },
+                        getPlaylistSongs = { playlistId ->
+                            app.container.libraryRepository.getSongsForPlaylist(playlistId)
                         }
                     )
                 }
@@ -188,7 +191,18 @@ fun HeartyMainScreen(
                     isShuffleActive = isShuffleActive,
                     isRepeatActive = isRepeatActive,
                     isFavorited = favoriteIds.contains(currentSong.id),
-                    lyricsRepository = app.container.lyricsRepository
+                    lyricsRepository = app.container.lyricsRepository,
+                    playlists = playlists,
+                    onAddToPlaylist = { playlistId, songToAdd ->
+                        coroutineScope.launch {
+                            app.container.libraryRepository.addSongToPlaylist(playlistId, songToAdd)
+                        }
+                    },
+                    onCreatePlaylistAndAddSong = { title, emoji, songToAdd ->
+                        coroutineScope.launch {
+                            app.container.libraryRepository.createPlaylistAndAddSong(title, emoji, songToAdd)
+                        }
+                    }
                 )
             }
         }

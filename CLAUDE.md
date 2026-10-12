@@ -32,10 +32,10 @@ in the background, show lyrics, favorites, playlists, share songs/playlists.
    - Playlist: export compact share code (gzip + base64 of name + video IDs) or .json file via share sheet; import by paste or open file
 
 ## UI / design
-Minimal, soft, girly. Lots of whitespace.
-- Palette: background #FFF8F6, primary dusty pink #E8A0B4, secondary lavender #CDB4DB, text #3D2C33, subtle surface #FDEDEF
+Minimal, soft, girly. Lots of whitespace. Screens follow the Stitch "Cozy Moments" designs.
+- Palette: source of truth is `ui/theme/Color.kt` (Cozy* tokens): bg #FFFDF9, card #FFF2F5, accent #E87A90, accent light #FFB8C6, text #3D2B35, muted #8C7480. Use tokens, never raw hex in screens.
 - Rounded corners 20-28dp, soft shadows, no harsh borders
-- Rounded friendly font (Nunito or Quicksand via downloadable Google Fonts)
+- Font: Quicksand (downloadable Google Fonts, `ui/theme/Type.kt`)
 - Big album art on the player screen, simple bottom nav (Home, Search, Library)
 - Light theme first; dark theme later
 
@@ -46,3 +46,16 @@ Minimal, soft, girly. Lots of whitespace.
 - Handle failures: extractor errors, no internet, expired URL -> retry once, then show a friendly message.
 - Don't add libraries I didn't approve.
 - Personal-use only. Don't add anything meant for publishing or monetizing.
+
+## Status
+Done: Phase 0 scaffold, 1 search+play, 2 background playback, 3 Room (favorites, history, playlist create), lyrics (synced + karaoke view).
+Next / known gaps:
+- No real queue: `MusicPlayerManager.play()` uses `setMediaItem` (single item) -> no auto-advance, notification next/prev and shuffle do nothing.
+- Playlists: can't add songs; `getSongsForPlaylist` joins `favorite_songs` (wrong table); `songCount` never updated.
+- Sharing: song uses youtu.be (spec: music.youtube.com); playlist share code/import not built.
+- Placeholder UI (fake BPM/genre tags, "Cozy Buds Pro", non-filtering chips), hardcoded strings, oversized composables (PlayerScreen, LibraryScreen, HomeScreen).
+
+## Build & run (Windows)
+- JDK: `$env:JAVA_HOME="C:\Program Files\Android\Android Studio\jbr"`
+- Build + install on USB phone: `.\gradlew.bat installDebug`
+- adb: `C:\Users\sonny\AppData\Local\Android\Sdk\platform-tools\adb.exe`

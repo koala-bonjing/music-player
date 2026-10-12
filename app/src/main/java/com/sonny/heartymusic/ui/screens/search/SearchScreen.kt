@@ -28,8 +28,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.ErrorOutline
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.NorthWest
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -117,10 +119,13 @@ fun SearchScreen(
     modifier: Modifier = Modifier
 ) {
     val query by viewModel.query.collectAsState()
+    val suggestions by viewModel.suggestions.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val playerState by viewModel.playerState.collectAsState()
     val focusManager = LocalFocusManager.current
     var selectedCategory by remember { mutableStateOf("Top Results") }
+
+    val showSuggestions = query.isNotBlank() && suggestions.isNotEmpty()
 
     Column(
         modifier = modifier
@@ -137,6 +142,7 @@ fun SearchScreen(
             },
             onClear = {
                 viewModel.onQueryChange("")
+                viewModel.clearSuggestions()
             }
         )
 
@@ -180,31 +186,117 @@ fun SearchScreen(
 
         Spacer(modifier = Modifier.height(14.dp))
 
-        when (val state = uiState) {
-            is SearchUiState.Idle -> {
-                SearchIdleView(
-                    onVibeClick = { vibeQuery ->
-                        viewModel.onQueryChange(vibeQuery)
-                        viewModel.search()
+        if (showSuggestions) {
+            SearchSuggestionsList(
+                suggestions = suggestions,
+                onSelectSuggestion = { suggestion ->
+                    focusManager.clearFocus()
+                    viewModel.selectSuggestion(suggestion)
+                }
+            )
+        } else {
+            when (val state = uiState) {
+                is SearchUiState.Idle -> {
+                    SearchIdleView(
+                        onVibeClick = { vibeQuery ->
+                            viewModel.onQueryChange(vibeQuery)
+                            viewModel.search()
+                        }
+                    )
+                }
+                is SearchUiState.Loading -> {
+                    SearchLoadingView()
+                }
+                is SearchUiState.Error -> {
+                    SearchErrorView(
+                        errorMessage = state.message,
+                        onRetry = viewModel::retry
+                    )
+                }
+                is SearchUiState.Success -> {
+                    SearchResultList(
+                        songs = state.songs,
+                        currentlyPlayingId = playerState.currentSong?.id,
+                        isPlaying = playerState.isPlaying,
+                        onSongClick = viewModel::playSong
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchSuggestionsList(
+    suggestions: List<String>,
+    onSelectSuggestion: (String) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(20.dp)),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = CozyCard.copy(alpha = 0.95f)),
+        border = CardDefaults.outlinedCardBorder().copy(
+            brush = Brush.linearGradient(listOf(CozyCardBorder, CozyCardBorder))
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            itemsIndexed(suggestions) { index, item ->
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onSelectSuggestion(item) }
+                        .padding(horizontal = 16.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(CozyAccentSoft),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Search,
+                            contentDescription = null,
+                            tint = CozyAccent,
+                            modifier = Modifier.size(14.dp)
+                        )
                     }
-                )
-            }
-            is SearchUiState.Loading -> {
-                SearchLoadingView()
-            }
-            is SearchUiState.Error -> {
-                SearchErrorView(
-                    errorMessage = state.message,
-                    onRetry = viewModel::retry
-                )
-            }
-            is SearchUiState.Success -> {
-                SearchResultList(
-                    songs = state.songs,
-                    currentlyPlayingId = playerState.currentSong?.id,
-                    isPlaying = playerState.isPlaying,
-                    onSongClick = viewModel::playSong
-                )
+
+                    Spacer(modifier = Modifier.width(12.dp))
+
+                    Text(
+                        text = item,
+                        fontSize = 13.5.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = CozyText,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Icon(
+                        imageVector = Icons.Rounded.NorthWest,
+                        contentDescription = "Select suggestion",
+                        tint = CozyMuted.copy(alpha = 0.6f),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+
+                if (index < suggestions.lastIndex) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(1.dp)
+                            .padding(horizontal = 16.dp)
+                            .background(CozyCardBorder.copy(alpha = 0.45f))
+                    )
+                }
             }
         }
     }

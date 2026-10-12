@@ -46,13 +46,17 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
@@ -82,11 +86,13 @@ fun LibraryScreen(
     playlists: List<PlaylistEntity> = emptyList(),
     onCreatePlaylist: (String, String) -> Unit = { _, _ -> },
     onPlaySong: (Song) -> Unit = {},
+    getPlaylistSongs: (String) -> Flow<List<Song>> = { emptyFlow() },
     modifier: Modifier = Modifier
 ) {
     var selectedFilter by remember { mutableStateOf("Playlists") }
     var isCreatingPlaylist by remember { mutableStateOf(false) }
     var viewingLikedSongs by remember { mutableStateOf(false) }
+    var selectedPlaylist by remember { mutableStateOf<PlaylistEntity?>(null) }
 
     val dynamicGreeting = remember { getDynamicGreeting() }
 
@@ -156,34 +162,38 @@ fun LibraryScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                IconButton(
-                    onClick = { /* Library search filter */ },
+                Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
+                        .shadow(elevation = 2.dp, shape = CircleShape, spotColor = Color(0x12000000))
                         .clip(CircleShape)
                         .background(Color.White)
                         .border(1.dp, CozyCardBorder, CircleShape)
+                        .clickable { /* Search in library */ },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Search,
                         contentDescription = "Search in library",
                         tint = CozyMuted,
-                        modifier = Modifier.size(17.dp)
+                        modifier = Modifier.size(16.dp)
                     )
                 }
 
-                IconButton(
-                    onClick = { isCreatingPlaylist = true },
+                Box(
                     modifier = Modifier
-                        .size(36.dp)
+                        .size(34.dp)
+                        .shadow(elevation = 3.dp, shape = CircleShape, spotColor = CozyAccent.copy(alpha = 0.4f))
                         .clip(CircleShape)
                         .background(CozyAccent)
+                        .clickable { isCreatingPlaylist = true },
+                    contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Rounded.Add,
                         contentDescription = "Add playlist",
                         tint = Color.White,
-                        modifier = Modifier.size(20.dp)
+                        modifier = Modifier.size(17.dp)
                     )
                 }
             }
@@ -250,9 +260,12 @@ fun LibraryScreen(
                 )
             }
 
-            if (viewingLikedSongs) {
+            if (viewingLikedSongs || selectedPlaylist != null) {
                 TextButton(
-                    onClick = { viewingLikedSongs = false },
+                    onClick = {
+                        viewingLikedSongs = false
+                        selectedPlaylist = null
+                    },
                     contentPadding = PaddingValues(horizontal = 4.dp, vertical = 0.dp)
                 ) {
                     Row(
@@ -284,6 +297,13 @@ fun LibraryScreen(
                 favorites = favorites,
                 onSongClick = onPlaySong
             )
+        } else if (selectedPlaylist != null) {
+            val playlistSongs by getPlaylistSongs(selectedPlaylist!!.id).collectAsState(initial = emptyList())
+            PlaylistDetailView(
+                playlist = selectedPlaylist!!,
+                songs = playlistSongs,
+                onSongClick = onPlaySong
+            )
         } else {
             LazyColumn(
                 modifier = Modifier.fillMaxSize(),
@@ -303,7 +323,7 @@ fun LibraryScreen(
                     PlaylistItemRow(
                         playlist = playlist,
                         onClick = {
-                            // Can expand or play playlist in future
+                            selectedPlaylist = playlist
                         }
                     )
                 }
@@ -389,17 +409,17 @@ private fun PinnedLikedSongsCard(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Heart icon squircle
+                // Heart icon squircle (refined 44dp with 18dp heart)
                 Box(
                     modifier = Modifier
-                        .size(52.dp)
-                        .clip(RoundedCornerShape(14.dp))
+                        .size(44.dp)
+                        .shadow(elevation = 2.dp, shape = RoundedCornerShape(12.dp), spotColor = Color(0x25F472B6))
+                        .clip(RoundedCornerShape(12.dp))
                         .background(
                             Brush.linearGradient(
                                 listOf(
                                     Color(0xFFF472B6),
-                                    Color(0xFFFB7185),
-                                    Color(0xFFD8B4FE)
+                                    Color(0xFFFB7185)
                                 )
                             )
                         ),
@@ -409,7 +429,7 @@ private fun PinnedLikedSongsCard(
                         imageVector = Icons.Rounded.Favorite,
                         contentDescription = "Liked Songs",
                         tint = Color.White,
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(18.dp)
                     )
                 }
 
@@ -513,7 +533,7 @@ private fun PlaylistItemRow(
                 )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
-                    text = if (playlist.description.isNotEmpty()) playlist.description else "Playlist • By You",
+                    text = if (playlist.songCount > 0) "Playlist • ${playlist.songCount} songs" else if (playlist.description.isNotEmpty()) playlist.description else "Playlist • By You",
                     fontSize = 11.5.sp,
                     color = CozyMuted,
                     maxLines = 1,
@@ -619,7 +639,7 @@ private fun LikedSongsListView(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(60.dp)
+                        .size(48.dp)
                         .clip(CircleShape)
                         .background(Color.White)
                         .border(1.dp, CozyCardBorder, CircleShape),
@@ -629,7 +649,7 @@ private fun LikedSongsListView(
                         imageVector = Icons.Rounded.Favorite,
                         contentDescription = null,
                         tint = CozyAccent,
-                        modifier = Modifier.size(28.dp)
+                        modifier = Modifier.size(20.dp)
                     )
                 }
                 Spacer(modifier = Modifier.height(14.dp))
@@ -697,15 +717,186 @@ private fun LikedSongsListView(
                                 maxLines = 1
                             )
                         }
-                        IconButton(
-                            onClick = { onSongClick(song) },
-                            modifier = Modifier.size(32.dp)
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(CozyAccentSoft)
+                                .clickable { onSongClick(song) },
+                            contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.PlayArrow,
                                 contentDescription = "Play",
                                 tint = CozyAccent,
-                                modifier = Modifier.size(20.dp)
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun PlaylistDetailView(
+    playlist: PlaylistEntity,
+    songs: List<Song>,
+    onSongClick: (Song) -> Unit
+) {
+    if (songs.isEmpty()) {
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 24.dp),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(containerColor = CozyCard),
+            border = CardDefaults.outlinedCardBorder().copy(
+                brush = Brush.linearGradient(listOf(CozyCardBorder, CozyCardBorder))
+            )
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(28.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(54.dp)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFFDE8E9))
+                        .border(1.dp, CozyCardBorder, RoundedCornerShape(16.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = playlist.coverEmoji.ifEmpty { "💌" }, fontSize = 26.sp)
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+                Text(
+                    text = playlist.title,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = CozyText
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "No songs in this playlist yet ♡\nAdd songs by tapping the \"+\" button in the music player!",
+                    fontSize = 12.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                    color = CozyMuted,
+                    lineHeight = 17.sp
+                )
+            }
+        }
+    } else {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            contentPadding = PaddingValues(bottom = 90.dp)
+        ) {
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 6.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = CozyCard.copy(alpha = 0.8f)),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = Brush.linearGradient(listOf(CozyCardBorder, CozyCardBorder))
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(50.dp)
+                                .clip(RoundedCornerShape(14.dp))
+                                .background(Color(0xFFFDE8E9)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(text = playlist.coverEmoji.ifEmpty { "💌" }, fontSize = 24.sp)
+                        }
+                        Spacer(modifier = Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = playlist.title,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = CozyText
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = "${songs.size} cozy tracks",
+                                fontSize = 12.sp,
+                                color = CozyAccent,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
+                    }
+                }
+            }
+
+            items(songs, key = { it.id }) { song ->
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(16.dp))
+                        .clickable { onSongClick(song) },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = CardDefaults.cardColors(containerColor = CozyCard.copy(alpha = 0.75f)),
+                    border = CardDefaults.outlinedCardBorder().copy(
+                        brush = Brush.linearGradient(listOf(CozyCardBorder.copy(alpha = 0.4f), CozyCardBorder.copy(alpha = 0.4f)))
+                    )
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        AsyncImage(
+                            model = song.thumbnailUrl,
+                            contentDescription = song.title,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = song.title,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = CozyText,
+                                maxLines = 1,
+                                modifier = Modifier.basicMarquee()
+                            )
+                            Text(
+                                text = song.artist,
+                                fontSize = 11.sp,
+                                color = CozyMuted,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(30.dp)
+                                .clip(CircleShape)
+                                .background(CozyAccentSoft),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.PlayArrow,
+                                contentDescription = "Play",
+                                tint = CozyAccent,
+                                modifier = Modifier.size(16.dp)
                             )
                         }
                     }
@@ -733,7 +924,7 @@ private fun CozySanctuaryCard() {
         ) {
             Box(
                 modifier = Modifier
-                    .size(46.dp)
+                    .size(38.dp)
                     .clip(CircleShape)
                     .background(Color(0xFFF3E8FF)),
                 contentAlignment = Alignment.Center
@@ -742,7 +933,7 @@ private fun CozySanctuaryCard() {
                     imageVector = Icons.Rounded.Favorite,
                     contentDescription = null,
                     tint = Color(0xFFC084FC),
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(17.dp)
                 )
             }
             Spacer(modifier = Modifier.height(10.dp))

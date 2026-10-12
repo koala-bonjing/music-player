@@ -31,7 +31,8 @@ data class PlayerState(
     val isLoading: Boolean = false,
     val currentPositionMs: Long = 0L,
     val durationMs: Long = 0L,
-    val error: String? = null
+    val error: String? = null,
+    val sourceTitle: String? = null
 )
 
 class MusicPlayerManager(
@@ -181,7 +182,7 @@ class MusicPlayerManager(
         }
     }
 
-    fun play(song: Song, queue: List<Song>? = null) {
+    fun play(song: Song, queue: List<Song>? = null, sourceTitle: String? = null) {
         if (queue != null) {
             playlistQueue.clear()
             playlistQueue.addAll(queue)
@@ -192,6 +193,7 @@ class MusicPlayerManager(
         _playerState.update {
             it.copy(
                 currentSong = song,
+                sourceTitle = sourceTitle,
                 isLoading = true,
                 error = null,
                 currentPositionMs = 0L,
@@ -280,6 +282,7 @@ class MusicPlayerManager(
     }
 
     fun seekTo(positionMs: Long) {
+        _playerState.update { it.copy(currentPositionMs = positionMs, isLoading = true) }
         mediaController?.seekTo(positionMs)
     }
 
@@ -335,7 +338,7 @@ class MusicPlayerManager(
         progressTrackerJob = scope.launch {
             while (isActive) {
                 val controller = mediaController
-                if (controller != null) {
+                if (controller != null && controller.playbackState != Player.STATE_BUFFERING) {
                     val currentPos = controller.currentPosition.coerceAtLeast(0L)
                     val duration = controller.duration.coerceAtLeast(0L)
                     _playerState.update {
@@ -345,7 +348,7 @@ class MusicPlayerManager(
                         )
                     }
                 }
-                delay(500)
+                delay(100)
             }
         }
     }

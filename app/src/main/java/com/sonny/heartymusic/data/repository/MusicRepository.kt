@@ -31,6 +31,16 @@ class MusicRepository {
         }
     }
 
+    suspend fun getSearchSuggestions(query: String): List<String> = withContext(Dispatchers.IO) {
+        val trimmed = query.trim()
+        if (trimmed.isBlank()) return@withContext emptyList()
+        try {
+            ServiceList.YouTube.getSuggestionExtractor().suggestionList(trimmed)
+        } catch (_: Throwable) {
+            emptyList()
+        }
+    }
+
     suspend fun resolveStreamUrl(videoId: String): Result<String> = withContext(Dispatchers.IO) {
         runCatchingWithRetry {
             val watchUrl = "https://www.youtube.com/watch?v=$videoId"

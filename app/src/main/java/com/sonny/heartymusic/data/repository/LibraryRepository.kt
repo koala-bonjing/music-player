@@ -58,10 +58,67 @@ class LibraryRepository(
         )
     }
 
+    fun getSongsForPlaylist(playlistId: String): Flow<List<Song>> =
+        dao.getSongsForPlaylist(playlistId).map { list ->
+            list.map { it.toSong() }
+        }
+
+    suspend fun addSongToPlaylist(playlistId: String, song: Song) {
+        dao.addSongToPlaylist(
+            com.sonny.heartymusic.data.local.entity.PlaylistSongCrossRef(
+                playlistId = playlistId,
+                songId = song.id,
+                title = song.title,
+                artist = song.artist,
+                thumbnailUrl = song.thumbnailUrl,
+                durationSeconds = song.durationSeconds
+            )
+        )
+        dao.updatePlaylistSongCount(playlistId)
+    }
+
+    suspend fun createPlaylistAndAddSong(title: String, coverEmoji: String = "💌", song: Song): String {
+        val id = UUID.randomUUID().toString()
+        dao.insertPlaylist(
+            PlaylistEntity(
+                id = id,
+                title = title,
+                description = "Created by you",
+                coverEmoji = coverEmoji,
+                songCount = 1
+            )
+        )
+        dao.addSongToPlaylist(
+            com.sonny.heartymusic.data.local.entity.PlaylistSongCrossRef(
+                playlistId = id,
+                songId = song.id,
+                title = song.title,
+                artist = song.artist,
+                thumbnailUrl = song.thumbnailUrl,
+                durationSeconds = song.durationSeconds
+            )
+        )
+        return id
+    }
+
+    suspend fun removeSongFromPlaylist(playlistId: String, songId: String) {
+        dao.removeSongFromPlaylist(playlistId, songId)
+        dao.updatePlaylistSongCount(playlistId)
+    }
+
     suspend fun deletePlaylist(playlistId: String) {
+        dao.deleteSongsForPlaylist(playlistId)
         dao.deletePlaylist(playlistId)
     }
 }
+
+fun com.sonny.heartymusic.data.local.entity.PlaylistSongCrossRef.toSong() = Song(
+    id = songId,
+    title = title,
+    artist = artist,
+    thumbnailUrl = thumbnailUrl,
+    durationSeconds = durationSeconds
+)
 
 fun Song.toFavoriteEntity() = FavoriteSongEntity(
     id = id,

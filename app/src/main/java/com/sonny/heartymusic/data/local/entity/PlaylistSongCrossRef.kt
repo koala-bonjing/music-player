@@ -9,5 +9,9 @@ import androidx.room.Entity
 data class PlaylistSongCrossRef(
     val playlistId: String,
     val songId: String,
+    val title: String,
+    val artist: String,
+    val thumbnailUrl: String,
+    val durationSeconds: Long,
     val addedAt: Long = System.currentTimeMillis()
 )
