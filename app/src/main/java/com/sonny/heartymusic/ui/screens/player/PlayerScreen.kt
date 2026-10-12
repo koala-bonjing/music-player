@@ -104,6 +104,8 @@ import com.sonny.heartymusic.ui.theme.CozyCard
 import com.sonny.heartymusic.ui.theme.CozyCardBorder
 import com.sonny.heartymusic.ui.theme.CozyMuted
 import com.sonny.heartymusic.ui.theme.CozyText
+import com.sonny.heartymusic.ui.components.bibble.BibbleButton
+import com.sonny.heartymusic.ui.components.bibble.PixelBibblePet
 import java.util.concurrent.TimeUnit
 
 @Composable
@@ -130,6 +132,7 @@ fun PlayerScreen(
     val context = LocalContext.current
     var isLyricsExpanded by remember { mutableStateOf(false) }
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
+    var isBibbleVisible by remember { mutableStateOf(false) }
 
     var lyrics by remember { mutableStateOf<List<LyricLine>>(emptyList()) }
     var isLoadingLyrics by remember { mutableStateOf(false) }
@@ -443,6 +446,14 @@ fun PlayerScreen(
                             modifier = Modifier.size(16.dp)
                         )
                     }
+
+                    // Bibble Pixel Screen Companion Button
+                    BibbleButton(
+                        isActive = isBibbleVisible,
+                        onClick = {
+                            isBibbleVisible = !isBibbleVisible
+                        }
+                    )
                 }
             }
 
@@ -956,6 +967,16 @@ fun PlayerScreen(
                 onDismiss = { showAddToPlaylistDialog = false }
             )
         }
+
+        // Interactive Pixel Bibble Screen Pet
+        PixelBibblePet(
+            isVisible = isBibbleVisible,
+            isPlaying = playerState.isPlaying,
+            isFavorited = isFavorited,
+            songTitle = song.title,
+            artist = song.artist,
+            onDismiss = { isBibbleVisible = false }
+        )
     }
 }
 
