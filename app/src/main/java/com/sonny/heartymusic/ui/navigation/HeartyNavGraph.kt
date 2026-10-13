@@ -77,6 +77,10 @@ fun HeartyMainScreen(
     val favoriteIds by app.container.musicPlayerManager.favoriteSongIds.collectAsState()
     val isShuffleActive by app.container.musicPlayerManager.isShuffleMode.collectAsState()
     val isRepeatActive by app.container.musicPlayerManager.isRepeatMode.collectAsState()
+    val queue by app.container.musicPlayerManager.queue.collectAsState()
+    val queueState by app.container.musicPlayerManager.queueState.collectAsState()
+    val isLoadingMore by app.container.musicPlayerManager.isLoadingMore.collectAsState()
+    val isAutoplay by app.container.musicPlayerManager.isAutoplay.collectAsState()
 
     val favorites by app.container.libraryRepository.favorites.collectAsState(initial = emptyList())
     val recentHistory by app.container.libraryRepository.recentHistory.collectAsState(initial = emptyList())
@@ -202,7 +206,19 @@ fun HeartyMainScreen(
                         coroutineScope.launch {
                             app.container.libraryRepository.createPlaylistAndAddSong(title, emoji, songToAdd)
                         }
-                    }
+                    },
+                    queueState = queueState,
+                    isLoadingMore = isLoadingMore,
+                    queue = queue,
+                    isAutoplay = isAutoplay,
+                    onToggleAutoplay = { app.container.musicPlayerManager.toggleAutoplay() },
+                    onPlaySong = { s -> app.container.musicPlayerManager.play(s) },
+                    onPlayQueueItem = { idx -> app.container.musicPlayerManager.skipToQueueItem(idx) },
+                    onPlayNext = { idx -> app.container.musicPlayerManager.moveToPlayNext(idx) },
+                    onRemoveFromQueue = { idx -> app.container.musicPlayerManager.removeQueueItem(idx) },
+                    onClearQueue = { app.container.musicPlayerManager.clearQueue() },
+                    onApplyVibe = { query, title -> app.container.musicPlayerManager.populateVibeQueue(query, title) },
+                    favoriteSongIds = favoriteIds
                 )
             }
         }

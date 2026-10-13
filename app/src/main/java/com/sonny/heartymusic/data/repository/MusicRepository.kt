@@ -4,6 +4,7 @@ import com.sonny.heartymusic.data.model.Song
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.schabi.newpipe.extractor.ServiceList
+import org.schabi.newpipe.extractor.playlist.PlaylistInfo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 
 class MusicRepository {
@@ -15,19 +16,24 @@ class MusicRepository {
             val page = searchExtractor.initialPage
             page.items
                 .filterIsInstance<StreamInfoItem>()
-                .map { item ->
-                    val videoId = extractVideoId(item.url) ?: item.url
-                    val thumbUrl = item.thumbnails.maxByOrNull { it.height }?.url
-                        ?: "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
+                .map { it.toSong() }
+        }
+    }
 
-                    Song(
-                        id = videoId,
-                        title = item.name.orEmpty().ifBlank { "Untitled" },
-                        artist = item.uploaderName.orEmpty().ifBlank { "Unknown Artist" },
-                        durationSeconds = item.duration.coerceAtLeast(0L),
-                        thumbnailUrl = thumbUrl
-                    )
-                }
+    /**
+     * "Radio" for a song = YouTube's own auto-generated mix (list=RD<videoId>).
+     * It picks songs by listening patterns, so it's far better than guessing a genre from keywords.
+     */
+    suspend fun getRadio(seed: Song): Result<List<Song>> = withContext(Dispatchers.IO) {
+        runCatching {
+            val url = "https://www.youtube.com/watch?v=${seed.id}&list=RD${seed.id}"
+            PlaylistInfo.getInfo(ServiceList.YouTube, url)
+                .relatedItems
+                .filterIsInstance<StreamInfoItem>()
+                .map { it.toSong() }
+        }.recoverCatching {
+            // Mix unavailable: fall back to a plain artist search
+            searchSongs("${seed.artist} songs").getOrThrow()
         }
     }
 
@@ -79,5 +85,19 @@ class MusicRepository {
             if (id.isNotBlank()) return id
         }
         return null
+    }
+
+    private fun StreamInfoItem.toSong(): Song {
+        val videoId = extractVideoId(url) ?: url
+        val thumbUrl = thumbnails.maxByOrNull { it.height }?.url
+            ?: "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
+
+        return Song(
+            id = videoId,
+            title = name.orEmpty().ifBlank { "Untitled" },
+            artist = uploaderName.orEmpty().ifBlank { "Unknown Artist" },
+            durationSeconds = duration.coerceAtLeast(0L),
+            thumbnailUrl = thumbUrl
+        )
     }
 }

@@ -20,6 +20,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -97,6 +99,7 @@ import com.sonny.heartymusic.data.model.Song
 import com.sonny.heartymusic.data.repository.LyricLine
 import com.sonny.heartymusic.data.repository.LyricsRepository
 import com.sonny.heartymusic.player.PlayerState
+import com.sonny.heartymusic.player.QueueState
 import com.sonny.heartymusic.ui.theme.CozyAccent
 import com.sonny.heartymusic.ui.theme.CozyAccentLight
 import com.sonny.heartymusic.ui.theme.CozyAccentSoft
@@ -127,12 +130,28 @@ fun PlayerScreen(
     playlists: List<PlaylistEntity> = emptyList(),
     onAddToPlaylist: (playlistId: String, song: Song) -> Unit = { _, _ -> },
     onCreatePlaylistAndAddSong: (title: String, emoji: String, song: Song) -> Unit = { _, _, _ -> },
+    queueState: QueueState = QueueState(),
+    isLoadingMore: Boolean = false,
+    queue: List<Song> = emptyList(),
+    isAutoplay: Boolean = true,
+    onToggleAutoplay: () -> Unit = {},
+    onPlaySong: (Song) -> Unit = {},
+    onPlayQueueItem: (Int) -> Unit = {},
+    onPlayNext: (Int) -> Unit = {},
+    onRemoveFromQueue: (Int) -> Unit = {},
+    onClearQueue: () -> Unit = {},
+    onApplyVibe: (String, String) -> Unit = { _, _ -> },
+    favoriteSongIds: Set<String> = emptySet(),
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
     var isLyricsExpanded by remember { mutableStateOf(false) }
+    var isQueueExpanded by remember { mutableStateOf(false) }
     var showAddToPlaylistDialog by remember { mutableStateOf(false) }
     var isBibbleVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(playerState.isPlaying) {
+        if (playerState.isPlaying) isBibbleVisible = true
+    }
 
     var lyrics by remember { mutableStateOf<List<LyricLine>>(emptyList()) }
     var isLoadingLyrics by remember { mutableStateOf(false) }
@@ -190,8 +209,12 @@ fun PlayerScreen(
         )
     )
 
-    BackHandler(enabled = isLyricsExpanded) {
-        isLyricsExpanded = false
+    BackHandler(enabled = isLyricsExpanded || isQueueExpanded) {
+        if (isQueueExpanded) {
+            isQueueExpanded = false
+        } else if (isLyricsExpanded) {
+            isLyricsExpanded = false
+        }
     }
 
     Box(modifier = modifier.fillMaxSize()) {
@@ -201,7 +224,14 @@ fun PlayerScreen(
                 .background(backgroundBrush)
                 .statusBarsPadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp, vertical = 12.dp),
+                .padding(horizontal = 24.dp, vertical = 12.dp)
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures { _, dragAmount ->
+                        if (dragAmount < -25f && !isLyricsExpanded && !isQueueExpanded) {
+                            isQueueExpanded = true
+                        }
+                    }
+                },
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             // Top Navigation Bar
@@ -697,11 +727,11 @@ fun PlayerScreen(
                     Spacer(modifier = Modifier.width(4.dp))
                     IconButton(
                         onClick = {
-                            Toast.makeText(context, "Cozy Queue: ${song.title} playing ♡", Toast.LENGTH_SHORT).show()
+                            isQueueExpanded = true
                         },
                         modifier = Modifier.size(34.dp)
                     ) {
-                        Icon(imageVector = Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = "Queue", tint = CozyMuted, modifier = Modifier.size(18.dp))
+                        Icon(imageVector = Icons.AutoMirrored.Rounded.QueueMusic, contentDescription = "Queue", tint = if (isQueueExpanded) CozyAccent else CozyMuted, modifier = Modifier.size(18.dp))
                     }
                 }
             }
@@ -965,6 +995,40 @@ fun PlayerScreen(
                     showAddToPlaylistDialog = false
                 },
                 onDismiss = { showAddToPlaylistDialog = false }
+            )
+        }
+
+        // Expandable Full-Screen Queue View (Swipe-up sheet matching reference UI)
+        AnimatedVisibility(
+            visible = isQueueExpanded,
+            enter = slideInVertically(initialOffsetY = { it }) + fadeIn(),
+            exit = slideOutVertically(targetOffsetY = { it }) + fadeOut()
+        ) {
+            PlayerQueueSheet(
+                song = song,
+                playerState = playerState,
+                queueState = queueState,
+                isLoadingMore = isLoadingMore,
+                isAutoplay = isAutoplay,
+                isShuffleActive = isShuffleActive,
+                isRepeatActive = isRepeatActive,
+                favoriteSongIds = favoriteSongIds,
+                lyrics = lyrics,
+                activeLyricIndex = activeLyricIndex,
+                onDismiss = { isQueueExpanded = false },
+                onPlayQueueItem = onPlayQueueItem,
+                onPlayNext = onPlayNext,
+                onTogglePlayPause = onTogglePlayPause,
+                onSeekTo = onSeekTo,
+                onPrevious = onPrevious,
+                onNext = onNext,
+                onToggleShuffle = onToggleShuffle,
+                onToggleRepeat = onToggleRepeat,
+                onToggleAutoplay = onToggleAutoplay,
+                onToggleFavorite = { s -> if (s.id == song.id) onToggleFavorite() else onPlaySong(s) },
+                onRemoveFromQueue = onRemoveFromQueue,
+                onClearQueue = onClearQueue,
+                onApplyVibe = onApplyVibe
             )
         }
 
